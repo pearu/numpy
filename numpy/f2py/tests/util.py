@@ -54,7 +54,7 @@ def get_module_dir():
 def get_temp_module_name():
     # Assume single-threaded, and the module dir usable only by this thread
     global _module_num
-    d = get_module_dir()
+    get_module_dir()
     name = "_test_ext_module_%d" % _module_num
     _module_num += 1
     if name in sys.modules:
@@ -112,6 +112,8 @@ def build_module(source_files, options=[], skip=[], only=[], module_name=None):
         if ext in ('.f90', '.f', '.c', '.pyf'):
             f2py_sources.append(dst)
 
+    assert f2py_sources
+
     # Prepare options
     if module_name is None:
         module_name = get_temp_module_name()
@@ -157,6 +159,7 @@ def build_code(source_code, options=[], skip=[], only=[], suffix=None,
             f.write(source_code)
         return build_module([path], options=options, skip=skip, only=only,
                             module_name=module_name)
+
 
 #
 # Check if compilers are available at all...
@@ -242,8 +245,6 @@ def build_module_distutils(source_files, config_code, module_name, **kw):
     Build a module via distutils and import it.
 
     """
-    from numpy.distutils.misc_util import Configuration
-    from numpy.distutils.core import setup
 
     d = get_module_dir()
 
@@ -315,7 +316,11 @@ class F2PyTest:
     only = []
     suffix = '.f'
     module = None
-    module_name = None
+
+    @property
+    def module_name(self):
+        cls = type(self)
+        return f'_{cls.__module__.rsplit(".",1)[-1]}_{cls.__name__}_ext_module'
 
     def setup(self):
         if sys.platform == 'win32':

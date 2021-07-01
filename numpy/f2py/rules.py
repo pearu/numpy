@@ -60,21 +60,24 @@ f2py_version = __version__.version
 numpy_version = __version__.version
 
 from .auxfuncs import (
-    applyrules, debugcapi, dictappend, errmess, gentitle, getargs2,
-    hascallstatement, hasexternals, hasinitvalue, hasnote, hasresultnote,
-    isarray, isarrayofstrings, iscomplex, iscomplexarray,
-    iscomplexfunction, iscomplexfunction_warn, isdummyroutine, isexternal,
-    isfunction, isfunction_wrap, isint1array, isintent_aux, isintent_c,
-    isintent_callback, isintent_copy, isintent_hide, isintent_inout,
-    isintent_nothide, isintent_out, isintent_overwrite, islogical,
-    islong_complex, islong_double, islong_doublefunction, islong_long,
-    islong_longfunction, ismoduleroutine, isoptional, isrequired, isscalar,
-    issigned_long_longarray, isstring, isstringarray, isstringfunction,
-    issubroutine, issubroutine_wrap, isthreadsafe, isunsigned,
-    isunsigned_char, isunsigned_chararray, isunsigned_long_long,
-    isunsigned_long_longarray, isunsigned_short, isunsigned_shortarray,
-    l_and, l_not, l_or, outmess, replace, stripcomma, requiresf90wrapper
-)
+      applyrules, debugcapi, dictappend, errmess, gentitle, getargs2,
+      hascallstatement, hasexternals, hasinitvalue, hasnote,
+      hasresultnote, isarray, isarrayofstrings, ischaracter,
+      ischaracterarray, ischaracter_or_characterarray, iscomplex,
+      iscomplexarray, iscomplexfunction, iscomplexfunction_warn,
+      isdummyroutine, isexternal, isfunction, isfunction_wrap, isint1,
+      isint1array, isintent_aux, isintent_c, isintent_callback,
+      isintent_copy, isintent_hide, isintent_inout, isintent_nothide,
+      isintent_out, isintent_overwrite, islogical, islong_complex,
+      islong_double, islong_doublefunction, islong_long,
+      islong_longfunction, ismoduleroutine, isoptional, isrequired,
+      isscalar, issigned_long_longarray, isstring, isstringarray,
+      isstring_or_stringarray, isstringfunction, issubroutine,
+      issubroutine_wrap, isthreadsafe, isunsigned, isunsigned_char,
+      isunsigned_chararray, isunsigned_long_long,
+      isunsigned_long_longarray, isunsigned_short, isunsigned_shortarray,
+      l_and, l_not, l_or, outmess, replace, stripcomma, requiresf90wrapper
+    )
 
 from . import capi_maps
 from . import cfuncs
@@ -396,10 +399,18 @@ rout_rules = [
                                ismoduleroutine: '',
                                isdummyroutine: ''
                                },
-        'routine_def': {l_not(l_or(ismoduleroutine, isintent_c, isdummyroutine)): '\t{\"#name#\",-1,{{-1}},0,(char *)#F_FUNC#(#fortranname#,#FORTRANNAME#),(f2py_init_func)#apiname#,doc_#apiname#},',
-                        l_and(l_not(ismoduleroutine), isintent_c, l_not(isdummyroutine)): '\t{\"#name#\",-1,{{-1}},0,(char *)#fortranname#,(f2py_init_func)#apiname#,doc_#apiname#},',
-                        l_and(l_not(ismoduleroutine), isdummyroutine): '\t{\"#name#\",-1,{{-1}},0,NULL,(f2py_init_func)#apiname#,doc_#apiname#},',
-                        },
+        'routine_def': {
+            l_not(l_or(ismoduleroutine, isintent_c, isdummyroutine)):
+            '\t{\"#name#\",-1,{{-1}},0,0,(char *)'
+            '  #F_FUNC#(#fortranname#,#FORTRANNAME#),'
+            '  (f2py_init_func)#apiname#,doc_#apiname#},',
+            l_and(l_not(ismoduleroutine), isintent_c, l_not(isdummyroutine)):
+            '\t{\"#name#\",-1,{{-1}},0,0,(char *)#fortranname#,'
+            '  (f2py_init_func)#apiname#,doc_#apiname#},',
+            l_and(l_not(ismoduleroutine), isdummyroutine):
+            '\t{\"#name#\",-1,{{-1}},0,0,NULL,'
+            '  (f2py_init_func)#apiname#,doc_#apiname#},',
+        },
         'need': {l_and(l_not(l_or(ismoduleroutine, isintent_c)), l_not(isdummyroutine)): 'F_FUNC'},
         'callfortranroutine': [
             {debugcapi: [
@@ -423,9 +434,15 @@ rout_rules = [
                                isdummyroutine: '',
                                },
 
-        'routine_def': {l_not(l_or(ismoduleroutine, isdummyroutine)): '\t{\"#name#\",-1,{{-1}},0,(char *)#F_WRAPPEDFUNC#(#name_lower#,#NAME#),(f2py_init_func)#apiname#,doc_#apiname#},',
-                        isdummyroutine: '\t{\"#name#\",-1,{{-1}},0,NULL,(f2py_init_func)#apiname#,doc_#apiname#},',
-                        },
+        'routine_def': {
+            l_not(l_or(ismoduleroutine, isdummyroutine)):
+            '\t{\"#name#\",-1,{{-1}},0,0,(char *)'
+            '  #F_WRAPPEDFUNC#(#name_lower#,#NAME#),'
+            '  (f2py_init_func)#apiname#,doc_#apiname#},',
+            isdummyroutine:
+            '\t{\"#name#\",-1,{{-1}},0,0,NULL,'
+            '  (f2py_init_func)#apiname#,doc_#apiname#},',
+        },
         'initf2pywraphook': {l_not(l_or(ismoduleroutine, isdummyroutine)): '''
     {
       extern #ctype# #F_FUNC#(#name_lower#,#NAME#)(void);
@@ -461,9 +478,15 @@ rout_rules = [
                                isdummyroutine: '',
                                },
 
-        'routine_def': {l_not(l_or(ismoduleroutine, isdummyroutine)): '\t{\"#name#\",-1,{{-1}},0,(char *)#F_WRAPPEDFUNC#(#name_lower#,#NAME#),(f2py_init_func)#apiname#,doc_#apiname#},',
-                        isdummyroutine: '\t{\"#name#\",-1,{{-1}},0,NULL,(f2py_init_func)#apiname#,doc_#apiname#},',
-                        },
+        'routine_def': {
+            l_not(l_or(ismoduleroutine, isdummyroutine)):
+            '\t{\"#name#\",-1,{{-1}},0,0,(char *)'
+            '  #F_WRAPPEDFUNC#(#name_lower#,#NAME#),'
+            '  (f2py_init_func)#apiname#,doc_#apiname#},',
+            isdummyroutine:
+            '\t{\"#name#\",-1,{{-1}},0,0,NULL,'
+            '  (f2py_init_func)#apiname#,doc_#apiname#},',
+        },
         'initf2pywraphook': {l_not(l_or(ismoduleroutine, isdummyroutine)): '''
     {
       extern void #F_FUNC#(#name_lower#,#NAME#)(void);
@@ -516,10 +539,19 @@ rout_rules = [
                                l_and(l_not(ismoduleroutine), isintent_c, l_not(isdummyroutine)): 'extern #ctype# #fortranname#(#callprotoargument#);',
                                isdummyroutine: ''
                                },
-        'routine_def': {l_and(l_not(l_or(ismoduleroutine, isintent_c)), l_not(isdummyroutine)): '\t{\"#name#\",-1,{{-1}},0,(char *)#F_FUNC#(#fortranname#,#FORTRANNAME#),(f2py_init_func)#apiname#,doc_#apiname#},',
-                        l_and(l_not(ismoduleroutine), isintent_c, l_not(isdummyroutine)): '\t{\"#name#\",-1,{{-1}},0,(char *)#fortranname#,(f2py_init_func)#apiname#,doc_#apiname#},',
-                        isdummyroutine: '\t{\"#name#\",-1,{{-1}},0,NULL,(f2py_init_func)#apiname#,doc_#apiname#},',
-                        },
+        'routine_def': {
+            l_and(l_not(l_or(ismoduleroutine, isintent_c)),
+                  l_not(isdummyroutine)):
+            ('\t{\"#name#\",-1,{{-1}},0,0,(char *)'
+             '  #F_FUNC#(#fortranname#,#FORTRANNAME#),'
+             '  (f2py_init_func)#apiname#,doc_#apiname#},'),
+            l_and(l_not(ismoduleroutine), isintent_c, l_not(isdummyroutine)):
+            ('\t{\"#name#\",-1,{{-1}},0,0,(char *)#fortranname#,'
+             '  (f2py_init_func)#apiname#,doc_#apiname#},'),
+            isdummyroutine:
+            '\t{\"#name#\",-1,{{-1}},0,0,NULL,'
+            '(f2py_init_func)#apiname#,doc_#apiname#},',
+        },
         'decl': [{iscomplexfunction_warn: '\t#ctype# #name#_return_value={0,0};',
                   l_not(iscomplexfunction): '\t#ctype# #name#_return_value=0;'},
                  {iscomplexfunction:
@@ -552,11 +584,15 @@ rout_rules = [
         '_check': l_and(isfunction, l_not(isstringfunction), l_not(isfunction_wrap))
     }, {  # String function # in use for --no-wrap
         'declfortranroutine': 'extern void #F_FUNC#(#fortranname#,#FORTRANNAME#)(#callprotoargument#);',
-        'routine_def': {l_not(l_or(ismoduleroutine, isintent_c)):
-                        '\t{\"#name#\",-1,{{-1}},0,(char *)#F_FUNC#(#fortranname#,#FORTRANNAME#),(f2py_init_func)#apiname#,doc_#apiname#},',
-                        l_and(l_not(ismoduleroutine), isintent_c):
-                        '\t{\"#name#\",-1,{{-1}},0,(char *)#fortranname#,(f2py_init_func)#apiname#,doc_#apiname#},'
-                        },
+        'routine_def': {
+            l_not(l_or(ismoduleroutine, isintent_c)):
+            '\t{\"#name#\",-1,{{-1}},0,0,(char *)'
+            '  #F_FUNC#(#fortranname#,#FORTRANNAME#),'
+            '  (f2py_init_func)#apiname#,doc_#apiname#},',
+            l_and(l_not(ismoduleroutine), isintent_c):
+            '\t{\"#name#\",-1,{{-1}},0,0,(char *)#fortranname#,'
+            '  (f2py_init_func)#apiname#,doc_#apiname#},'
+        },
         'decl': ['\t#ctype# #name#_return_value = NULL;',
                  '\tint #name#_return_value_len = 0;'],
         'callfortran':'#name#_return_value,#name#_return_value_len,',
@@ -614,6 +650,8 @@ typedef_need_dict = {islong_long: 'long_long',
                      isunsigned_shortarray: 'unsigned_short',
                      isunsigned_long_longarray: 'unsigned_long_long',
                      issigned_long_longarray: 'long_long',
+                     isint1: 'signed_char',
+                     ischaracter_or_characterarray: 'character',
                      }
 
 aux_rules = [
@@ -676,7 +714,7 @@ aux_rules = [
      },
     # Integer*-1 array
     {'need': '#ctype#',
-     '_check': isunsigned_chararray,
+     '_check': l_or(isunsigned_chararray, isunsigned_char),
      '_depend': ''
      },
     # Integer*-2 array
@@ -847,7 +885,8 @@ if (#varname#_cb.capi==Py_None) {
 \tif (f2py_success) {"""},
         'closepyobjfrom': {isintent_inout: "\t} /*if (f2py_success) of #varname# pyobjfrom*/"},
         'need': {isintent_inout: 'try_pyarr_from_#ctype#'},
-        '_check': l_and(isscalar, l_not(iscomplex), isintent_nothide)
+        '_check': l_and(isscalar, l_not(iscomplex), l_not(isstring),
+                        isintent_nothide)
     }, {
         'frompyobj': [
             # hasinitvalue...
@@ -954,11 +993,11 @@ if (#varname#_cb.capi==Py_None) {
         'return': {isintent_out: ',#varname#'},
         'need': ['len..',
                  {l_and(isintent_out, l_not(isintent_c)): 'STRINGPADN'}],
-        '_check':isstring
+        '_check': isstring
     }, {  # Common
         'frompyobj': [
             """\
-\tslen(#varname#) = #length#;
+\tslen(#varname#) = #elsize#;
 \tf2py_success = #ctype#_from_pyobj(&#varname#,&slen(#varname#),#init#,"""
 """#varname#_capi,\"#ctype#_from_pyobj failed in converting #nth#"""
 """`#varname#\' of #pyname# to C #ctype#\");
@@ -1002,11 +1041,13 @@ if (#varname#_cb.capi==Py_None) {
         'decl': ['\t#ctype# *#varname# = NULL;',
                  '\tnpy_intp #varname#_Dims[#rank#] = {#rank*[-1]#};',
                  '\tconst int #varname#_Rank = #rank#;',
-                 '\tPyArrayObject *capi_#varname#_tmp = NULL;',
+                 '\tPyArrayObject *capi_#varname#_as_array = NULL;',
                  '\tint capi_#varname#_intent = 0;',
+                 {isstringarray: '\tint slen(#varname#) = 0;'},
                  ],
         'callfortran':'#varname#,',
-        'return':{isintent_out: ',capi_#varname#_tmp'},
+        'callfortranappend': {isstringarray: 'slen(#varname#),'},
+        'return': {isintent_out: ',capi_#varname#_as_array'},
         'need': 'len..',
         '_check': isarray
     }, {  # intent(overwrite) array
@@ -1048,36 +1089,48 @@ if (#varname#_cb.capi==Py_None) {
         'keys_capi': {isoptional: ',&#varname#_capi'},
         '_check': l_and(isarray, isintent_nothide)
     }, {
-        'frompyobj': ['\t#setdims#;',
-                      '\tcapi_#varname#_intent |= #intent#;',
-                      {isintent_hide:
-                       '\tcapi_#varname#_tmp = array_from_pyobj(#atype#,#varname#_Dims,#varname#_Rank,capi_#varname#_intent,Py_None);'},
-                      {isintent_nothide:
-                       '\tcapi_#varname#_tmp = array_from_pyobj(#atype#,#varname#_Dims,#varname#_Rank,capi_#varname#_intent,#varname#_capi);'},
-                      """\
-\tif (capi_#varname#_tmp == NULL) {
-\t\tPyObject *exc, *val, *tb;
-\t\tPyErr_Fetch(&exc, &val, &tb);
-\t\tPyErr_SetString(exc ? exc : #modulename#_error,\"failed in converting #nth# `#varname#\' of #pyname# to C/Fortran array\" );
-\t\tnpy_PyErr_ChainExceptionsCause(exc, val, tb);
-\t} else {
-\t\t#varname# = (#ctype# *)(PyArray_DATA(capi_#varname#_tmp));
+        'frompyobj': [
+            '\t#setdims#;',
+            '\tcapi_#varname#_intent |= #intent#;',
+            '    const char * capi_errmess = "#modulename#.#pyname#:'
+            ' failed to create array from the #nth# `#varname#`";',
+            {isintent_hide:
+             '\tcapi_#varname#_as_array = ndarray_from_pyobj('
+             '  #atype#,#elsize#,#varname#_Dims,#varname#_Rank,'
+             '  capi_#varname#_intent,Py_None,capi_errmess);'},
+            {isintent_nothide:
+             '\tcapi_#varname#_as_array = ndarray_from_pyobj('
+             '  #atype#,#elsize#,#varname#_Dims,#varname#_Rank,'
+             '  capi_#varname#_intent,#varname#_capi,capi_errmess);'},
+            """\
+    if (capi_#varname#_as_array == NULL) {
+        PyObject* capi_err = PyErr_Occurred();
+        if (capi_err == NULL) {
+            capi_err = #modulename#_error;
+            PyErr_SetString(capi_err, capi_errmess);
+        }
+    } else {
+        #varname# = (#ctype# *)(PyArray_DATA(capi_#varname#_as_array));
 """,
-                      {hasinitvalue: [
-                          {isintent_nothide:
-                              '\tif (#varname#_capi == Py_None) {'},
-                          {isintent_hide: '\t{'},
-                          {iscomplexarray: '\t\t#ctype# capi_c;'},
-                          """\
+            {isstringarray:
+             '\tslen(#varname#) = f2py_itemsize(#varname#);'},
+            {hasinitvalue: [
+                {isintent_nothide:
+                 '\tif (#varname#_capi == Py_None) {'},
+                {isintent_hide: '\t{'},
+                {iscomplexarray: '\t\t#ctype# capi_c;'},
+                """\
 \t\tint *_i,capi_i=0;
 \t\tCFUNCSMESS(\"#name#: Initializing #varname#=#init#\\n\");
-\t\tif (initforcomb(PyArray_DIMS(capi_#varname#_tmp),PyArray_NDIM(capi_#varname#_tmp),1)) {
+\t\tif (initforcomb(PyArray_DIMS(capi_#varname#_as_array),
+\t\t                PyArray_NDIM(capi_#varname#_as_array),1)) {
 \t\t\twhile ((_i = nextforcomb()))
 \t\t\t\t#varname#[capi_i++] = #init#; /* fortran way */
 \t\t} else {
 \t\t\tPyObject *exc, *val, *tb;
 \t\t\tPyErr_Fetch(&exc, &val, &tb);
-\t\t\tPyErr_SetString(exc ? exc : #modulename#_error,\"Initialization of #nth# #varname# failed (initforcomb).\");
+\t\t\tPyErr_SetString(exc ? exc : #modulename#_error,
+\t\t\t\t\"Initialization of #nth# #varname# failed (initforcomb).\");
 \t\t\tnpy_PyErr_ChainExceptionsCause(exc, val, tb);
 \t\t\tf2py_success = 0;
 \t\t}
@@ -1085,12 +1138,13 @@ if (#varname#_cb.capi==Py_None) {
 \tif (f2py_success) {"""]},
                       ],
         'cleanupfrompyobj': [  # note that this list will be reversed
-            '\t}  /*if (capi_#varname#_tmp == NULL) ... else of #varname#*/',
+            '\t}  '
+            '/* if (capi_#varname#_as_array == NULL) ... else of #varname# */',
             {l_not(l_or(isintent_out, isintent_hide)): """\
-\tif((PyObject *)capi_#varname#_tmp!=#varname#_capi) {
-\t\tPy_XDECREF(capi_#varname#_tmp); }"""},
+\tif((PyObject *)capi_#varname#_as_array!=#varname#_capi) {
+\t\tPy_XDECREF(capi_#varname#_as_array); }"""},
             {l_and(isintent_hide, l_not(isintent_out))
-                   : """\t\tPy_XDECREF(capi_#varname#_tmp);"""},
+                   : """\t\tPy_XDECREF(capi_#varname#_as_array);"""},
             {hasinitvalue: '\t}  /*if (f2py_success) of #varname# init*/'},
         ],
         '_check': isarray,
@@ -1127,6 +1181,16 @@ if (#varname#_cb.capi==Py_None) {
      '_check': iscomplexarray,
      '_depend': ''
      },
+    # Character
+    {
+        'need': 'string',
+        '_check': ischaracter,
+    },
+    # Character array
+    {
+        'need': 'string',
+        '_check': ischaracterarray,
+    },
     # Stringarray
     {
         'callfortranappend': {isarrayofstrings: 'flen(#varname#),'},

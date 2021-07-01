@@ -84,7 +84,7 @@ Usage:
                        'optional','required', etc)
      K = D['kindselector'] = {['*','kind']} (only if D['typespec'] =
                          'complex' | 'integer' | 'logical' | 'real' )
-     C = D['charselector'] = {['*','len','kind']}
+     C = D['charselector'] = {['*','len','kind','f2py_len']}
                              (only if D['typespec']=='character')
      D['='] --- initialization expression string
      D['typename'] --- name of the type if D['typespec']=='type'
@@ -97,7 +97,7 @@ Usage:
      D['typespec>']*K['*']
      D['typespec'](kind=K['kind'])
      character*C['*']
-     character(len=C['len'],kind=C['kind'])
+     character(len=C['len'],kind=C['kind'], f2py_len=C['f2py_len'])
      (see also fortran type declaration statement formats below)
 
 Fortran 90 type declaration statement format (F77 is subset of F90)
@@ -1505,7 +1505,9 @@ kindselector = re.compile(
 charselector = re.compile(
     r'\s*(\((?P<lenkind>.*)\)|\*\s*(?P<charlen>.*))\s*\Z', re.I)
 lenkindpattern = re.compile(
-    r'\s*(kind\s*=\s*(?P<kind>.*?)\s*(@,@\s*len\s*=\s*(?P<len>.*)|)|(len\s*=\s*|)(?P<len2>.*?)\s*(@,@\s*(kind\s*=\s*|)(?P<kind2>.*)|))\s*\Z', re.I)
+    r'\s*(kind\s*=\s*(?P<kind>.*?)\s*(@,@\s*len\s*=\s*(?P<len>.*)|)'
+    r'|(len\s*=\s*|)(?P<len2>.*?)\s*(@,@\s*(kind\s*=\s*|)(?P<kind2>.*)'
+    r'|(f2py_len\s*=\s*(?P<f2py_len>.*))|))\s*\Z', re.I)
 lenarraypattern = re.compile(
     r'\s*(@\(@\s*(?!/)\s*(?P<array>.*?)\s*@\)@\s*\*\s*(?P<len>.*?)|(\*\s*(?P<len2>.*?)|)\s*(@\(@\s*(?!/)\s*(?P<array2>.*?)\s*@\)@|))\s*(=\s*(?P<init>.*?)|(@\(@|)/\s*(?P<init2>.*?)\s*/(@\)@|)|)\s*\Z', re.I)
 
@@ -1734,6 +1736,9 @@ def cracktypespec(typespec, selector):
                         lenkind[lk] = lenkind[lk + '2']
                     charselect[lk] = lenkind[lk]
                     del lenkind[lk + '2']
+                if lenkind['f2py_len'] is not None:
+                    # used to specify the length of assumed length strings
+                    charselect['f2py_len'] = lenkind['f2py_len']
             del charselect['lenkind']
             for k in list(charselect.keys()):
                 if not charselect[k]:
@@ -1803,6 +1808,7 @@ def setcharselector(decl, sel, force=0):
     if 'charselector' not in decl:
         decl['charselector'] = sel
         return decl
+
     for k in list(sel.keys()):
         if force or k not in decl['charselector']:
             decl['charselector'][k] = sel[k]
@@ -2653,7 +2659,6 @@ def analyzevars(block):
                 elif n in block['args']:
                     outmess('analyzevars: typespec of variable %s is not defined in routine %s.\n' % (
                         repr(n), block['name']))
-
         if 'charselector' in vars[n]:
             if 'len' in vars[n]['charselector']:
                 l = vars[n]['charselector']['len']
@@ -2755,29 +2760,6 @@ def analyzevars(block):
                         if v:
                             savelindims[d] = v, di
                     vars[n]['dimension'].append(d)
-        if 'dimension' in vars[n]:
-            if isintent_c(vars[n]):
-                shape_macro = 'shape'
-            else:
-                shape_macro = 'shape'  # 'fshape'
-            if isstringarray(vars[n]):
-                if 'charselector' in vars[n]:
-                    d = vars[n]['charselector']
-                    if '*' in d:
-                        d = d['*']
-                        errmess('analyzevars: character array "character*%s %s(%s)" is considered as "character %s(%s)"; "intent(c)" is forced.\n'
-                                % (d, n,
-                                   ','.join(vars[n]['dimension']),
-                                   n, ','.join(vars[n]['dimension'] + [d])))
-                        vars[n]['dimension'].append(d)
-                        del vars[n]['charselector']
-                        if 'intent' not in vars[n]:
-                            vars[n]['intent'] = []
-                        if 'c' not in vars[n]['intent']:
-                            vars[n]['intent'].append('c')
-                    else:
-                        errmess(
-                            "analyzevars: charselector=%r unhandled." % (d))
         if 'check' not in vars[n] and 'args' in block and n in block['args']:
             flag = 'depend' not in vars[n]
             if flag:
@@ -2814,15 +2796,15 @@ def analyzevars(block):
                        and l_or(isintent_in, isintent_inout, isintent_inplace)(vars[n]):
                         vars[d]['depend'] = [n]
                         if ni > 1:
-                            vars[d]['='] = '%s%s(%s,%s)%s' % (
-                                pd, shape_macro, n, i, ad)
+                            vars[d]['='] = '%sshape(%s,%s)%s' % (
+                                pd, n, i, ad)
                         else:
                             vars[d]['='] = '%slen(%s)%s' % (pd, n, ad)
                         #  /---< no check
                         if 1 and 'check' not in vars[d]:
                             if ni > 1:
-                                vars[d]['check'] = ['%s%s(%s,%i)%s==%s'
-                                                    % (pd, shape_macro, n, i, ad, d)]
+                                vars[d]['check'] = ['%sshape(%s,%i)%s==%s'
+                                                    % (pd, n, i, ad, d)]
                             else:
                                 vars[d]['check'] = [
                                     '%slen(%s)%s>=%s' % (pd, n, ad, d)]

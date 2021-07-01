@@ -11,15 +11,13 @@ class TestReturnCharacter(util.F2PyTest):
 
     def check_function(self, t, tname):
         if tname in ['t0', 't1', 's0', 's1']:
-            assert_(t(23) == b'2')
+            assert_(t('23') == b'2')
             r = t('ab')
             assert_(r == b'a', repr(r))
             r = t(array('ab'))
             assert_(r == b'a', repr(r))
             r = t(array(77, 'u1'))
             assert_(r == b'M', repr(r))
-            #assert_(_raises(ValueError, t, array([77,87])))
-            #assert_(_raises(ValueError, t, array(77)))
         elif tname in ['ts', 'ss']:
             assert_(t(23) == b'23', repr(t(23)))
             assert_(t('123456789abcdef') == b'123456789a')

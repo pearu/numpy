@@ -2,7 +2,6 @@ import numpy as np
 from numpy.testing import assert_array_equal
 from . import util
 from numpy.f2py import crackfortran
-import tempfile
 import textwrap
 
 
@@ -35,7 +34,8 @@ class TestNoSpace(util.F2PyTest):
         assert_array_equal(k, w + 1)
         self.module.subc([w, k])
         assert_array_equal(k, w + 1)
-        assert self.module.t0(23) == b'2'
+        assert self.module.t0('23') == b'2'
+
 
 class TestPublicPrivate():
     def test_defaultPrivate(self, tmp_path):
@@ -87,6 +87,7 @@ class TestPublicPrivate():
         assert 'private' not in mod['vars']['seta']['attrspec']
         assert 'public' in mod['vars']['seta']['attrspec']
 
+
 class TestExternal(util.F2PyTest):
     # issue gh-17859: add external attribute support
     code = """
@@ -115,6 +116,7 @@ class TestExternal(util.F2PyTest):
             return x + 123
         r = self.module.external_as_attribute(incr)
         assert r == 123
+
 
 class TestCrackFortran(util.F2PyTest):
 
