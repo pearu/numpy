@@ -414,3 +414,28 @@ class TestCharacter(util.F2PyTest):
 
         a = np.array(list('abc'), dtype='S1')
         assert_array_equal(f(a), a)
+
+
+class TestMiscCharacter(util.F2PyTest):
+    # options = ['--debug-capi', '--build-dir', '/tmp/test-build-f2py']
+    suffix = '.f90'
+    fprefix = 'test_misc_character'
+
+    code = textwrap.dedent(f"""
+       subroutine {fprefix}_gh18684(x, y, m)
+         character(len=5), dimension(m), intent(in) :: x
+         character*5, dimension(m), intent(out) :: y
+         integer i, m
+         !f2py integer, intent(hide), depend(x) :: m = f2py_len(x)
+         do i=1,m
+           y(i) = x(i)
+         end do
+       end subroutine {fprefix}_gh18684
+    """)
+
+    def test_gh18684(self):
+        # Tests correctness of character(len=5) and character*5 usages
+        f = getattr(self.module, self.fprefix + '_gh18684')
+        x = np.array(["abcde", "fghij"], dtype='S5')
+        y = f(x)
+        assert_array_equal(x, y)
