@@ -146,6 +146,11 @@ import re
 import os
 import copy
 import platform
+import codecs
+try:
+    import chardet
+except ImportError:
+    chardet = None
 
 from . import __version__
 
@@ -325,6 +330,27 @@ def is_free_format(file):
     return result
 
 
+def openhook(filename, mode):
+    """Ensures that filename is opened with correct encoding parameter.
+
+    This function uses chardet package, when available, for
+    determining the encoding of the file to be opened. When chardet is
+    not available, the function detects only UTF-8-SIG encoding,
+    otherwise, ASCII encoding is used.
+    """
+    bytes = min(32, os.path.getsize(filename))
+    raw = open(filename, 'rb').read(bytes)
+    if raw.startswith(codecs.BOM_UTF8):
+        encoding = 'UTF-8-SIG'
+    else:
+        if chardet is not None:
+            encoding = chardet.detect(raw)['encoding']
+        else:
+            # hint: install chardet to ensure correct encoding handling
+            encoding = 'ascii'
+    return open(filename, mode, encoding=encoding)
+
+
 # Read fortran (77,90) code
 def readfortrancode(ffile, dowithline=show, istop=1):
     """
@@ -357,7 +383,7 @@ def readfortrancode(ffile, dowithline=show, istop=1):
     ll, l1 = '', ''
     spacedigits = [' '] + [str(_m) for _m in range(10)]
     filepositiontext = ''
-    fin = fileinput.FileInput(ffile)
+    fin = fileinput.FileInput(ffile, openhook=openhook)
     while True:
         l = fin.readline()
         if not l:
