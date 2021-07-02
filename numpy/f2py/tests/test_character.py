@@ -431,6 +431,14 @@ class TestMiscCharacter(util.F2PyTest):
            y(i) = x(i)
          end do
        end subroutine {fprefix}_gh18684
+
+       subroutine {fprefix}_gh6308(x, i)
+       integer i
+       !f2py check(i>=0 && i<12) i
+       character*5 name, x
+       common name(12)
+       name(i + 1) = x
+       end subroutine {fprefix}_gh6308
     """)
 
     def test_gh18684(self):
@@ -439,3 +447,14 @@ class TestMiscCharacter(util.F2PyTest):
         x = np.array(["abcde", "fghij"], dtype='S5')
         y = f(x)
         assert_array_equal(x, y)
+
+    def test_gh6308(self):
+        # Tests correctness of character string array in a common block
+        f = getattr(self.module, self.fprefix + '_gh6308')
+
+        assert_equal(self.module._BLNK_.name.dtype, np.dtype('S5'))
+        assert_equal(len(self.module._BLNK_.name), 12)
+        f("abcde", 0)
+        assert_equal(self.module._BLNK_.name[0], b"abcde")
+        f("12345", 5)
+        assert_equal(self.module._BLNK_.name[5], b"12345")
