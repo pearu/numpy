@@ -713,8 +713,11 @@ static int swap_arrays(PyArrayObject* obj1, PyArrayObject* obj2) {
        )
 
 /*
-  get_elsize determines the array itemsize from Python object.
-  Returns elsize if succesful, -1 otherwise.
+  get_elsize determines array itemsize from a Python object.  Returns
+  elsize if succesful, -1 otherwise.
+
+  Supported types of the input are: numpy.ndarray, bytes, str, tuple,
+  list.
  */
 static int
 get_elsize(PyObject *obj) {
@@ -724,6 +727,20 @@ get_elsize(PyObject *obj) {
     return PyBytes_GET_SIZE(obj);
   } else if (PyUnicode_Check(obj)) {
     return PyUnicode_GET_LENGTH(obj);
+  } else if (PySequence_Check(obj)) {
+    PyObject* fast = PySequence_Fast(obj, "f2py:fortranobject.c:get_elsize");
+    if (fast != NULL) {
+      Py_ssize_t i, n = PySequence_Fast_GET_SIZE(fast);
+      int sz, elsize = 0;
+      for (i=0; i<n; i++) {
+        sz = get_elsize(PySequence_Fast_GET_ITEM(fast, i) /* borrowed */);
+        if (sz > elsize) {
+          elsize = sz;
+        }
+      }
+      Py_DECREF(fast);
+      return elsize;
+    }
   }
   return -1;
 }
@@ -969,11 +986,15 @@ ndarray_from_pyobj(const int type_num,
             PyArray_FromAny(obj, descr, 0,0,
                             ((intent & F2PY_INTENT_C)?NPY_ARRAY_CARRAY:NPY_ARRAY_FARRAY) \
                             | NPY_ARRAY_FORCECAST, NULL);
+        // Warning: in the case of NPY_STRING, PyArray_FromAny may
+        // reset descr->elsize, e.g. dtype('S0') becomes dtype('S1').
         if (arr==NULL) {
           Py_DECREF(descr);
           return NULL;
         }
-        if (PyArray_ITEMSIZE(arr) != elsize) {
+        if (type_num != NPY_STRING && PyArray_ITEMSIZE(arr) != elsize) {
+          // This is internal sanity tests: elsize has been set to
+          // descr->elsize in the beginning of this function.
           strcpy(mess, "failed to initialize intent(in) array");
           sprintf(mess+strlen(mess)," -- expected elsize=%d got %" NPY_INTP_FMT, elsize, (npy_intp)PyArray_ITEMSIZE(arr));
           PyErr_SetString(PyExc_ValueError,mess);

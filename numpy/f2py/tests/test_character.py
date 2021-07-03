@@ -439,17 +439,27 @@ class TestMiscCharacter(util.F2PyTest):
        common name(12)
        name(i + 1) = x
        end subroutine {fprefix}_gh6308
+
+       subroutine {fprefix}_gh4519(x)
+         character(len=*), intent(in) :: x(:)
+         !f2py intent(out) x
+         integer :: i
+         do i=1, size(x)
+           print*, "x(",i,")=", x(i)
+         end do
+       end subroutine {fprefix}_gh4519
     """)
 
     def test_gh18684(self):
-        # Tests correctness of character(len=5) and character*5 usages
+        # Test character(len=5) and character*5 usages
         f = getattr(self.module, self.fprefix + '_gh18684')
         x = np.array(["abcde", "fghij"], dtype='S5')
         y = f(x)
+
         assert_array_equal(x, y)
 
     def test_gh6308(self):
-        # Tests correctness of character string array in a common block
+        # Test character string array in a common block
         f = getattr(self.module, self.fprefix + '_gh6308')
 
         assert_equal(self.module._BLNK_.name.dtype, np.dtype('S5'))
@@ -458,3 +468,19 @@ class TestMiscCharacter(util.F2PyTest):
         assert_equal(self.module._BLNK_.name[0], b"abcde")
         f("12345", 5)
         assert_equal(self.module._BLNK_.name[5], b"12345")
+
+    def test_gh4519(self):
+        # Test array of assumed length strings
+        f = getattr(self.module, self.fprefix + '_gh4519')
+
+        for x, expected in [
+                ('a', dict(shape=(), dtype=np.dtype('S1'))),
+                ('text', dict(shape=(), dtype=np.dtype('S4'))),
+                (np.array(['1', '2', '3'], dtype='S1'),
+                 dict(shape=(3,), dtype=np.dtype('S1'))),
+                (['1', '2', '34'],
+                 dict(shape=(3,), dtype=np.dtype('S2'))),
+                (['', ''], dict(shape=(2,), dtype=np.dtype('S1')))]:
+            r = f(x)
+            for k, v in expected.items():
+                assert_equal(getattr(r, k), v)

@@ -3298,6 +3298,12 @@ def vars2fortran(block, vars, args, tab='', as_interface=False):
         if 'attrspec' in vars[a]:
             attr = [l for l in vars[a]['attrspec']
                     if l not in ['external']]
+            if as_interface and 'intent(in)' in attr and 'intent(out)' in attr:
+                # In Fortran, intent(in, out) are conflicting while intent(in, out)
+                # can be specified only via `!f2py intent(out) ..`.
+                # So, for the Fortran interface, we'll drop
+                # intent(out) to resolve the conflict.
+                attr.remove('intent(out)')
             if attr:
                 vardef = '%s, %s' % (vardef, ','.join(attr))
                 c = ','
