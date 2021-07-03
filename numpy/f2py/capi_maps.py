@@ -295,6 +295,20 @@ def getctype(var):
     return ctype
 
 
+def f2cexpr(expr):
+    """Rewrite Fortran expression as f2py supported C expression.
+
+    Due to the lack of proper expression parser in f2py, this function
+    uses heuristic approach that assumes that Fortran arithmetic
+    expressions are often valid C arithmetic expressions when mapping
+    Fortran function calls to the corresponding C function/CPP macros
+    calls.
+    """
+    # TODO: support Fortran `len` function with optional kind parameter
+    expr = re.sub(r'\blen\b', 'f2py_slen', expr)
+    return expr
+
+
 def getstrlength(var):
     if isstringfunction(var):
         if 'result' in var:
@@ -314,7 +328,7 @@ def getstrlength(var):
         if '*' in a:
             len = a['*']
         elif 'len' in a:
-            len = a['len']
+            len = f2cexpr(a['len'])
     if re.match(r'\(\s*(\*|:)\s*\)', len) or re.match(r'(\*|:)', len):
         if isintent_hide(var):
             errmess('getstrlength:intent(hide): expected a string with defined length but got: %s\n' % (

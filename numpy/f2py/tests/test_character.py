@@ -433,11 +433,11 @@ class TestMiscCharacter(util.F2PyTest):
        end subroutine {fprefix}_gh18684
 
        subroutine {fprefix}_gh6308(x, i)
-       integer i
-       !f2py check(i>=0 && i<12) i
-       character*5 name, x
-       common name(12)
-       name(i + 1) = x
+         integer i
+         !f2py check(i>=0 && i<12) i
+         character*5 name, x
+         common name(12)
+         name(i + 1) = x
        end subroutine {fprefix}_gh6308
 
        subroutine {fprefix}_gh4519(x)
@@ -448,6 +448,21 @@ class TestMiscCharacter(util.F2PyTest):
            print*, "x(",i,")=", x(i)
          end do
        end subroutine {fprefix}_gh4519
+
+       pure function {fprefix}_gh3425(x) result (y)
+         character(len=*), intent(in) :: x
+         character(len=len(x)) :: y
+         integer :: i
+         do i = 1, len(x)
+           j = iachar(x(i:i))
+           if (j>=iachar("a") .and. j<=iachar("z") ) then
+             y(i:i) = achar(j-32)
+           else
+             y(i:i) = x(i:i)
+           endif
+         end do
+       end function {fprefix}_gh3425
+
     """)
 
     def test_gh18684(self):
@@ -484,3 +499,12 @@ class TestMiscCharacter(util.F2PyTest):
             r = f(x)
             for k, v in expected.items():
                 assert_equal(getattr(r, k), v)
+
+    def test_gh3425(self):
+        # Test returning a copy of assumed length string
+        f = getattr(self.module, self.fprefix + '_gh3425')
+        # f is equivalent to bytes.upper
+
+        assert_equal(f('abC'), b'ABC')
+        assert_equal(f(''), b'')
+        assert_equal(f('abC12d'), b'ABC12D')
